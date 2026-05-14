@@ -10,14 +10,14 @@ def _map_pago(row):
 
 @router.get("/catalogos/cuentas", response_model=list[CatalogoSimpleOut])
 def listar_cuentas():
-    sql = text("SELECT CuentaFinancieraId AS id, Nombre AS nombre FROM fin.CuentaFinanciera WHERE Activo = 1 ORDER BY Nombre")
+    sql = text("SELECT CuentaFinancieraId AS id, NombreCuenta AS nombre FROM fin.CuentaFinanciera WHERE Activo = 1 ORDER BY NombreCuenta")
     with engine.connect() as conn:
         rows = conn.execute(sql).mappings().all()
     return [CatalogoSimpleOut(**dict(r)) for r in rows]
 
 @router.get("/catalogos/cuentas-transferencia", response_model=list[CatalogoSimpleOut])
 def listar_cuentas_transferencia():
-    sql = text("SELECT CuentaFinancieraId AS id, Nombre AS nombre FROM fin.CuentaFinanciera WHERE Activo = 1 ORDER BY Nombre")
+    sql = text("SELECT CuentaFinancieraId AS id, NombreCuenta AS nombre FROM fin.CuentaFinanciera WHERE Activo = 1 ORDER BY NombreCuenta")
     with engine.connect() as conn:
         rows = conn.execute(sql).mappings().all()
     return [CatalogoSimpleOut(**dict(r)) for r in rows]
@@ -38,7 +38,7 @@ def listar_rubros():
 
 @router.get("/catalogos/periodos", response_model=list[CatalogoSimpleOut])
 def listar_periodos():
-    sql = text("SELECT PeriodoId AS id, Nombre AS nombre, CodigoPeriodo AS codigo FROM fin.Periodo ORDER BY CodigoPeriodo DESC")
+    sql = text("SELECT PeriodoId AS id, CodigoPeriodo AS nombre, CodigoPeriodo AS codigo FROM fin.PeriodoMensual ORDER BY CodigoPeriodo DESC")
     with engine.connect() as conn:
         rows = conn.execute(sql).mappings().all()
     return [CatalogoSimpleOut(**dict(r)) for r in rows]
@@ -55,7 +55,7 @@ def listar_pagos_desde_cuenta():
     sql = text('''
         SELECT pdc.PagoDesdeCuentaId AS id,
                CONVERT(varchar(10), pdc.FechaPago, 23) AS fecha,
-               cf.Nombre AS cuentaOrigen,
+               cf.NombreCuenta AS cuentaOrigen,
                pdc.CuentaFinancieraId AS cuentaOrigenId,
                pdc.PagadoA AS pagadoA,
                rd.Codigo AS responsable,
@@ -74,7 +74,7 @@ def listar_pagos_desde_cuenta():
         LEFT JOIN fin.ResponsableDeuda rd ON rd.ResponsableDeudaId = pdc.ResponsableDeudaId
         LEFT JOIN fin.RubroPresupuestario rc ON rc.RubroId = pdc.RubroClasificacionId
         LEFT JOIN fin.RubroPresupuestario ra ON ra.RubroId = pdc.RubroAplicadoId
-        LEFT JOIN fin.Periodo per ON per.PeriodoId = pdc.PeriodoId
+        LEFT JOIN fin.PeriodoMensual per ON per.PeriodoId = pdc.PeriodoId
         ORDER BY pdc.FechaPago DESC, pdc.PagoDesdeCuentaId DESC
     ''')
     with engine.connect() as conn:
