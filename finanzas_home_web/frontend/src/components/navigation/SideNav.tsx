@@ -30,7 +30,7 @@ const groups = [
 
 export function SideNav() {
   return (
-    <Paper elevation={0} sx={{ borderRadius: 5, overflow: "hidden", border: "1px solid rgba(255,255,255,.78)", background: "linear-gradient(180deg, rgba(255,255,255,.94), rgba(245,248,255,.74))", boxShadow: "0 24px 70px rgba(41,72,152,.12)", backdropFilter: "blur(18px)" }}>
+    <Paper elevation={0} sx={{ borderRadius: "8px", overflow: "hidden", border: "1px solid #e5e7eb", background: "linear-gradient(180deg, rgba(255,255,255,.94), rgba(245,248,255,.74))", boxShadow: "0 8px 24px rgba(41,72,152,.08)", backdropFilter: "blur(12px)" }}>
       <Typography variant="h6" fontWeight={700} sx={{ p: 2, pb: 1 }}>
         Módulos
       </Typography>
@@ -48,7 +48,7 @@ export function SideNav() {
                 component={NavLink}
                 to={item.to}
                 end={item.to === "/"}
-                sx={{ borderRadius: 3, mx: 1, mb: .4, "&.active": { bgcolor: "rgba(99,102,241,.12)", color: "#4f46e5", fontWeight: 900 }, "&:hover": { bgcolor: "rgba(99,102,241,.08)" } }}
+                sx={{ borderRadius: "6px", mx: 1, mb: .4, "&.active": { bgcolor: "rgba(99,102,241,.12)", color: "#4f46e5", fontWeight: 900 }, "&:hover": { bgcolor: "rgba(99,102,241,.08)" } }}
               >
                 <ListItemText primary={item.label} />
               </ListItemButton>

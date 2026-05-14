@@ -19,6 +19,7 @@ const routeTitles: Record<string, string> = {
 export function MainLayout() {
   const location = useLocation();
   const { user } = useAuth();
+  const isPagosDesdeCuenta = location.pathname === "/tesoreria/pagos-desde-cuenta";
 
   return (
     <Box sx={{ minHeight: "100vh", bgcolor: "#eef3fb", backgroundImage: "radial-gradient(circle at top left, rgba(99,102,241,.13), transparent 28%), radial-gradient(circle at top right, rgba(14,165,233,.1), transparent 24%)" }}>
@@ -29,21 +30,53 @@ export function MainLayout() {
         </Toolbar>
       </AppBar>
 
-      <Container maxWidth="xl" sx={{ py: 3 }}>
-        <Grid container spacing={2}>
-          <Grid item xs={12} md={3} lg={2.5}>
-            <SideNav />
-          </Grid>
-          <Grid item xs={12} md={9} lg={9.5}>
-            <Typography variant="overline" color="text.secondary">
-              {routeTitles[location.pathname] ?? "Finanzas_Home Web"}
-            </Typography>
-            <Box sx={{ mt: 1 }}>
-              <Outlet />
+      {isPagosDesdeCuenta ? (
+        <Box
+          sx={{
+            width: "100%",
+            maxWidth: "none",
+            py: 2,
+            px: "clamp(12px, 1.5vw, 24px)",
+          }}
+        >
+          <Box
+            sx={{
+              display: "grid",
+              gridTemplateColumns: { xs: "1fr", md: "260px minmax(0, 1fr)" },
+              gap: 1.5,
+              alignItems: "start",
+            }}
+          >
+            <Box>
+              <SideNav />
             </Box>
+            <Box minWidth={0}>
+              <Typography variant="overline" color="text.secondary">
+                {routeTitles[location.pathname] ?? "Finanzas_Home Web"}
+              </Typography>
+              <Box sx={{ mt: 0.6 }}>
+                <Outlet />
+              </Box>
+            </Box>
+          </Box>
+        </Box>
+      ) : (
+        <Container maxWidth="xl" sx={{ py: 3 }}>
+          <Grid container spacing={2}>
+            <Grid item xs={12} md={3} lg={2.5}>
+              <SideNav />
+            </Grid>
+            <Grid item xs={12} md={9} lg={9.5}>
+              <Typography variant="overline" color="text.secondary">
+                {routeTitles[location.pathname] ?? "Finanzas_Home Web"}
+              </Typography>
+              <Box sx={{ mt: 1 }}>
+                <Outlet />
+              </Box>
+            </Grid>
           </Grid>
-        </Grid>
-      </Container>
+        </Container>
+      )}
     </Box>
   );
 }

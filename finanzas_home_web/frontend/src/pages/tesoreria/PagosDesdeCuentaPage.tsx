@@ -1,13 +1,37 @@
 import { useEffect, useMemo, useState } from "react";
-import { Alert, Box, Button, Chip, CircularProgress, Divider, GlobalStyles, Grid, MenuItem, Paper, Stack, TextField, Typography } from "@mui/material";
+import {
+  Alert,
+  Box,
+  Button,
+  Chip,
+  CircularProgress,
+  Divider,
+  GlobalStyles,
+  Grid,
+  MenuItem,
+  Paper,
+  Stack,
+  TextField,
+  Tooltip,
+  Typography,
+} from "@mui/material";
 import { alpha } from "@mui/material/styles";
-import { DataGrid, GridColDef, GridRowParams } from "@mui/x-data-grid";
+import { DataGrid, GridColDef, GridRenderCellParams, GridRowParams } from "@mui/x-data-grid";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createPagoDesdeCuenta, deletePagoDesdeCuenta, getCuentasPago, getPagosDesdeCuenta, getPeriodosPago, getResponsablesPago, getRubrosPago, updatePagoDesdeCuenta } from "../../services/tesoreriaApi";
+import {
+  createPagoDesdeCuenta,
+  deletePagoDesdeCuenta,
+  getCuentasPago,
+  getPagosDesdeCuenta,
+  getPeriodosPago,
+  getResponsablesPago,
+  getRubrosPago,
+  updatePagoDesdeCuenta,
+} from "../../services/tesoreriaApi";
 import type { CatalogoSimple, PagoDesdeCuenta, PagoDesdeCuentaUpsert } from "../../types/tesoreria";
 
 function formatMonto(value: number) {
-  return new Intl.NumberFormat("es-CL", { style: "currency", currency: "CLP", maximumFractionDigits: 0 }).format(value);
+  return new Intl.NumberFormat("es-CL", { style: "currency", currency: "CLP", maximumFractionDigits: 0 }).format(value || 0);
 }
 
 const emptyForm: PagoDesdeCuentaUpsert = {
@@ -24,42 +48,56 @@ const emptyForm: PagoDesdeCuentaUpsert = {
   observacion: "",
 };
 
+const LOCAL_TITLE_SIZE = "13px";
+const BODY_TEXT_SIZE = "10.5px";
+
 function PageStyles() {
   return (
     <GlobalStyles
       styles={{
-        "@keyframes fadeUp": {
-          from: { opacity: 0, transform: "translateY(18px)" },
-          to: { opacity: 1, transform: "translateY(0)" },
-        },
-        "@keyframes pulseGlow": {
-          "0%, 100%": { opacity: .35, transform: "scale(1)" },
-          "50%": { opacity: .75, transform: "scale(1.08)" },
+        ":root": {
+          fontFamily: 'Calibri, "Calibri New", Arial, sans-serif',
         },
       }}
     />
   );
 }
 
-function GlassCard({ children, sx = {} }: { children: React.ReactNode; sx?: object }) {
+function Panel({ children, sx = {} }: { children: React.ReactNode; sx?: object }) {
   return (
     <Paper
       elevation={0}
       sx={{
-        position: "relative",
-        overflow: "hidden",
-        borderRadius: 6,
-        p: 2.6,
-        border: "1px solid rgba(255,255,255,.78)",
-        background: "linear-gradient(145deg, rgba(255,255,255,.92), rgba(244,247,255,.78))",
-        boxShadow: "0 24px 80px rgba(41, 72, 152, .13)",
-        backdropFilter: "blur(20px)",
-        animation: "fadeUp .5s ease both",
+        borderRadius: "8px",
+        border: "1px solid #e5e7eb",
+        backgroundColor: "rgba(255,255,255,.96)",
+        boxShadow: "0 2px 8px rgba(15,23,42,.05)",
         ...sx,
       }}
     >
       {children}
     </Paper>
+  );
+}
+
+function CellText({ value }: { value: unknown }) {
+  const text = value == null || value === "" ? "—" : String(value);
+  return (
+    <Tooltip title={text} arrow>
+      <Typography
+        title={text}
+        sx={{
+          fontSize: BODY_TEXT_SIZE,
+          lineHeight: 1.2,
+          whiteSpace: "nowrap",
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          width: "100%",
+        }}
+      >
+        {text}
+      </Typography>
+    </Tooltip>
   );
 }
 
@@ -101,9 +139,21 @@ export default function PagosDesdeCuentaPage() {
   const filteredRows = useMemo(() => {
     const q = search.trim().toLowerCase();
     return rows.filter((row) => {
-      const matchesText = !q || [row.fecha, row.cuentaOrigen, row.pagadoA, row.responsable, row.rubroClasificacion, row.rubroAplicado, row.periodo, row.descripcion, row.referenciaExterna]
-        .filter(Boolean)
-        .some((x) => String(x).toLowerCase().includes(q));
+      const matchesText =
+        !q ||
+        [
+          row.fecha,
+          row.cuentaOrigen,
+          row.pagadoA,
+          row.responsable,
+          row.rubroClasificacion,
+          row.rubroAplicado,
+          row.periodo,
+          row.descripcion,
+          row.referenciaExterna,
+        ]
+          .filter(Boolean)
+          .some((x) => String(x).toLowerCase().includes(q));
       const matchesPeriod = periodFilter === "" || row.periodoId === periodFilter;
       return matchesText && matchesPeriod;
     });
@@ -112,7 +162,9 @@ export default function PagosDesdeCuentaPage() {
   const stats = useMemo(() => {
     const total = filteredRows.reduce((acc, row) => acc + Number(row.monto ?? 0), 0);
     const maxPago = filteredRows.reduce((max, row) => Math.max(max, Number(row.monto ?? 0)), 0);
-    const noPresup = filteredRows.filter((row) => String(row.rubroAplicado ?? "").toLowerCase().includes("presupuest")).reduce((acc, row) => acc + Number(row.monto ?? 0), 0);
+    const noPresup = filteredRows
+      .filter((row) => String(row.rubroAplicado ?? "").toLowerCase().includes("presupuest"))
+      .reduce((acc, row) => acc + Number(row.monto ?? 0), 0);
     const uniquePayees = new Set(filteredRows.map((row) => row.pagadoA).filter(Boolean)).size;
     return { total, maxPago, noPresup, uniquePayees };
   }, [filteredRows]);
@@ -147,25 +199,74 @@ export default function PagosDesdeCuentaPage() {
     },
   });
 
-  const columns = useMemo<GridColDef<PagoDesdeCuenta>[]>(() => [
-    { field: "fecha", headerName: "Fecha", flex: .9 },
-    { field: "cuentaOrigen", headerName: "Cuenta origen", flex: 1.25 },
-    { field: "pagadoA", headerName: "Pagado a", flex: 1.2, renderCell: (params) => <Typography fontWeight={850} sx={{ pt: 1.4 }}>{params.value || "—"}</Typography> },
-    { field: "responsable", headerName: "Responsable", flex: 1 },
-    { field: "rubroAplicado", headerName: "Rubro aplicado", flex: 1.15, renderCell: (params) => <Chip size="small" label={params.value || "Sin rubro"} sx={{ mt: 1.15, fontWeight: 900, bgcolor: String(params.value ?? "").toUpperCase().includes("NO") ? "rgba(239,68,68,.12)" : "rgba(99,102,241,.11)", color: String(params.value ?? "").toUpperCase().includes("NO") ? "#dc2626" : "#4f46e5" }} /> },
-    { field: "periodo", headerName: "Período", flex: .85 },
-    { field: "descripcion", headerName: "Descripción", flex: 1.5 },
-    {
-      field: "monto",
-      headerName: "Monto",
-      flex: .95,
-      type: "number",
-      align: "right",
-      headerAlign: "right",
-      valueFormatter: (value) => formatMonto(Number(value ?? 0)),
-    },
-    { field: "referenciaExterna", headerName: "Referencia", flex: 1 },
-  ], []);
+  const columns = useMemo<GridColDef<PagoDesdeCuenta>[]>(
+    () => [
+      { field: "fecha", headerName: "Fecha", minWidth: 92, flex: 0.75, renderCell: (p: GridRenderCellParams<PagoDesdeCuenta>) => <CellText value={p.value} /> },
+      { field: "cuentaOrigen", headerName: "Cuenta", minWidth: 175, flex: 1.25, renderCell: (p: GridRenderCellParams<PagoDesdeCuenta>) => <CellText value={p.value} /> },
+      { field: "pagadoA", headerName: "Pagado a", minWidth: 180, flex: 1.3, renderCell: (p: GridRenderCellParams<PagoDesdeCuenta>) => <CellText value={p.value} /> },
+      { field: "responsable", headerName: "Responsable", minWidth: 130, flex: 1, renderCell: (p: GridRenderCellParams<PagoDesdeCuenta>) => <CellText value={p.value} /> },
+      {
+        field: "rubroAplicado",
+        headerName: "Rubro aplicado",
+        minWidth: 130,
+        flex: 1,
+        renderCell: (params: GridRenderCellParams<PagoDesdeCuenta>) => (
+          <Chip
+            size="small"
+            label={params.value || "Sin rubro"}
+            sx={{
+              height: 18,
+              borderRadius: "6px",
+              fontSize: "10px",
+              fontWeight: 500,
+              bgcolor: String(params.value ?? "").toUpperCase().includes("NO") ? "rgba(239,68,68,.1)" : "rgba(99,102,241,.1)",
+              color: String(params.value ?? "").toUpperCase().includes("NO") ? "#b91c1c" : "#4338ca",
+            }}
+          />
+        ),
+      },
+      { field: "periodo", headerName: "Período", minWidth: 88, flex: 0.7, renderCell: (p: GridRenderCellParams<PagoDesdeCuenta>) => <CellText value={p.value} /> },
+      { field: "descripcion", headerName: "Descripción", minWidth: 220, flex: 1.45, renderCell: (p: GridRenderCellParams<PagoDesdeCuenta>) => <CellText value={p.value} /> },
+      {
+        field: "monto",
+        headerName: "Monto",
+        minWidth: 100,
+        flex: 0.85,
+        type: "number",
+        align: "right",
+        headerAlign: "right",
+        valueFormatter: (value) => formatMonto(Number(value ?? 0)),
+      },
+      { field: "referenciaExterna", headerName: "Referencia", minWidth: 130, flex: 0.9, renderCell: (p: GridRenderCellParams<PagoDesdeCuenta>) => <CellText value={p.value} /> },
+      {
+        field: "acciones",
+        headerName: "Acciones",
+        minWidth: 94,
+        sortable: false,
+        filterable: false,
+        disableColumnMenu: true,
+        renderCell: (params: GridRenderCellParams<PagoDesdeCuenta>) => (
+          <Button
+            size="small"
+            variant="text"
+            onClick={() => onRowClick({ row: params.row } as GridRowParams<PagoDesdeCuenta>)}
+            sx={{
+              minWidth: 64,
+              px: 1,
+              fontSize: "10px",
+              textTransform: "none",
+              borderRadius: "6px",
+              color: "#4338ca",
+              fontWeight: 500,
+            }}
+          >
+            Editar
+          </Button>
+        ),
+      },
+    ],
+    []
+  );
 
   function onRowClick(params: GridRowParams<PagoDesdeCuenta>) {
     setSelected(params.row);
@@ -203,142 +304,493 @@ export default function PagosDesdeCuentaPage() {
     deleteMutation.mutate(selected.id);
   }
 
-  const loading = pagosQuery.isLoading || cuentasQuery.isLoading || responsablesQuery.isLoading || rubrosQuery.isLoading || periodosQuery.isLoading || createMutation.isPending || updateMutation.isPending || deleteMutation.isPending;
+  const loading =
+    pagosQuery.isLoading ||
+    cuentasQuery.isLoading ||
+    responsablesQuery.isLoading ||
+    rubrosQuery.isLoading ||
+    periodosQuery.isLoading ||
+    createMutation.isPending ||
+    updateMutation.isPending ||
+    deleteMutation.isPending;
 
   const error =
-    pagosQuery.error instanceof Error ? pagosQuery.error.message :
-    cuentasQuery.error instanceof Error ? cuentasQuery.error.message :
-    responsablesQuery.error instanceof Error ? responsablesQuery.error.message :
-    rubrosQuery.error instanceof Error ? rubrosQuery.error.message :
-    periodosQuery.error instanceof Error ? periodosQuery.error.message :
-    createMutation.error instanceof Error ? createMutation.error.message :
-    updateMutation.error instanceof Error ? updateMutation.error.message :
-    deleteMutation.error instanceof Error ? deleteMutation.error.message : null;
+    pagosQuery.error instanceof Error
+      ? pagosQuery.error.message
+      : cuentasQuery.error instanceof Error
+      ? cuentasQuery.error.message
+      : responsablesQuery.error instanceof Error
+      ? responsablesQuery.error.message
+      : rubrosQuery.error instanceof Error
+      ? rubrosQuery.error.message
+      : periodosQuery.error instanceof Error
+      ? periodosQuery.error.message
+      : createMutation.error instanceof Error
+      ? createMutation.error.message
+      : updateMutation.error instanceof Error
+      ? updateMutation.error.message
+      : deleteMutation.error instanceof Error
+      ? deleteMutation.error.message
+      : null;
 
   return (
-    <Box sx={{ position: "relative" }}>
+    <Box
+      sx={{
+        width: "100%",
+        maxWidth: "none",
+        fontFamily: 'Calibri, "Calibri New", Arial, sans-serif',
+        m: 0,
+        p: 0,
+      }}
+    >
       <PageStyles />
-      <Box sx={{ position: "absolute", inset: -24, zIndex: 0, background: "radial-gradient(circle at 15% 12%, rgba(99,102,241,.18), transparent 30%), radial-gradient(circle at 90% 5%, rgba(14,165,233,.14), transparent 30%), radial-gradient(circle at 80% 82%, rgba(239,68,68,.1), transparent 28%)", pointerEvents: "none" }} />
-      <Stack spacing={2.5} sx={{ position: "relative", zIndex: 1 }}>
-        <Paper elevation={0} sx={{ borderRadius: 7, p: { xs: 3, md: 3.5 }, overflow: "hidden", position: "relative", color: "#fff", background: "linear-gradient(135deg, #111827 0%, #1d4ed8 52%, #7c3aed 100%)", boxShadow: "0 30px 90px rgba(37,99,235,.26)" }}>
-          <Box sx={{ position: "absolute", width: 280, height: 280, borderRadius: "50%", right: -70, top: -105, background: "radial-gradient(circle, rgba(255,255,255,.31), transparent 64%)", animation: "pulseGlow 4.5s ease-in-out infinite" }} />
-          <Stack direction={{ xs: "column", md: "row" }} justifyContent="space-between" alignItems={{ xs: "flex-start", md: "center" }} spacing={2}>
+      <Stack spacing={1.1}>
+        <Panel sx={{ px: 1.5, py: 0.75 }}>
+          <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ minHeight: 40 }}>
             <Box>
-              <Chip label="TESORERÍA · PAGOS DESDE CUENTA" sx={{ bgcolor: "rgba(255,255,255,.16)", color: "#fff", fontWeight: 900, mb: 1.5 }} />
-              <Typography variant="h3" fontWeight={950} sx={{ letterSpacing: -1.5 }}>Control directo de salidas de caja</Typography>
-              <Typography sx={{ mt: 1, color: "rgba(255,255,255,.78)", maxWidth: 760 }}>
-                Registra pagos manuales desde cuentas, clasifica el rubro aplicado y controla rápidamente qué egresos golpean el balance del período.
+              <Typography sx={{ fontSize: "16px", lineHeight: 1.1, fontWeight: 600, color: "#111827" }}>Pagos desde cuenta</Typography>
+              <Typography sx={{ fontSize: BODY_TEXT_SIZE, lineHeight: 1.2, color: "#6b7280" }}>
+                Registro y control operativo de egresos con datos reales.
               </Typography>
             </Box>
-            <Stack direction="row" spacing={1.2}>
-              <Button variant="contained" onClick={resetForm} sx={{ bgcolor: "#fff", color: "#1d4ed8", borderRadius: 999, px: 3, fontWeight: 900, "&:hover": { bgcolor: "rgba(255,255,255,.9)" } }}>Nuevo pago</Button>
-              <Button variant="outlined" sx={{ color: "#fff", borderColor: "rgba(255,255,255,.45)", borderRadius: 999, px: 3, fontWeight: 900 }}>Exportar</Button>
+            <Stack direction="row" spacing={0.8}>
+              <Button
+                variant="contained"
+                onClick={resetForm}
+                sx={{
+                  minHeight: 28,
+                  px: 1.2,
+                  fontSize: "11px",
+                  fontWeight: 500,
+                  textTransform: "none",
+                  borderRadius: "6px",
+                  bgcolor: "#4f46e5",
+                  boxShadow: "none",
+                }}
+              >
+                Nuevo pago
+              </Button>
+              <Button
+                variant="outlined"
+                sx={{
+                  minHeight: 28,
+                  px: 1.2,
+                  fontSize: "11px",
+                  fontWeight: 500,
+                  textTransform: "none",
+                  borderRadius: "6px",
+                  borderColor: "#c7d2fe",
+                  color: "#4338ca",
+                }}
+              >
+                Exportar
+              </Button>
             </Stack>
           </Stack>
-        </Paper>
+        </Panel>
 
-        {(message || error) && <Alert severity={error ? "error" : message?.includes("requer") || message?.includes("mayor") || message?.includes("Selecciona") ? "warning" : "success"}>{error ?? message}</Alert>}
-
-        <Grid container spacing={2.5}>
-          <Grid item xs={12} sm={6} lg={3}><GlassCard><Typography variant="body2" color="text.secondary" fontWeight={800}>Total filtrado</Typography><Typography variant="h4" fontWeight={950}>{formatMonto(stats.total)}</Typography><Typography variant="caption" color="text.secondary">Suma de pagos visibles</Typography></GlassCard></Grid>
-          <Grid item xs={12} sm={6} lg={3}><GlassCard><Typography variant="body2" color="text.secondary" fontWeight={800}>Pago más alto</Typography><Typography variant="h4" fontWeight={950}>{formatMonto(stats.maxPago)}</Typography><Typography variant="caption" color="text.secondary">Mayor salida individual</Typography></GlassCard></Grid>
-          <Grid item xs={12} sm={6} lg={3}><GlassCard><Typography variant="body2" color="text.secondary" fontWeight={800}>No presupuestado</Typography><Typography variant="h4" fontWeight={950} color="#dc2626">{formatMonto(stats.noPresup)}</Typography><Typography variant="caption" color="text.secondary">Pagos marcados fuera de presupuesto</Typography></GlassCard></Grid>
-          <Grid item xs={12} sm={6} lg={3}><GlassCard><Typography variant="body2" color="text.secondary" fontWeight={800}>Beneficiarios</Typography><Typography variant="h4" fontWeight={950}>{stats.uniquePayees}</Typography><Typography variant="caption" color="text.secondary">Pagado a distintos destinatarios</Typography></GlassCard></Grid>
-        </Grid>
-
-        {loading && (
-          <GlassCard sx={{ py: 1.4 }}>
-            <Stack direction="row" spacing={1.5} alignItems="center"><CircularProgress size={20} /><Typography variant="body2" fontWeight={800}>Procesando información...</Typography></Stack>
-          </GlassCard>
+        {(message || error) && (
+          <Alert
+            severity={
+              error
+                ? "error"
+                : message?.includes("requer") || message?.includes("mayor") || message?.includes("Selecciona")
+                ? "warning"
+                : "success"
+            }
+            sx={{
+              py: 0.2,
+              borderRadius: "6px",
+              "& .MuiAlert-message": { fontSize: BODY_TEXT_SIZE, py: 0.5 },
+            }}
+          >
+            {error ?? message}
+          </Alert>
         )}
 
-        <Grid container spacing={2.5}>
-          <Grid item xs={12} lg={4}>
-            <GlassCard sx={{ p: 3, minHeight: 710 }}>
-              <Typography variant="h5" fontWeight={950} sx={{ letterSpacing: -.5 }}>{selected ? "Editar pago" : "Nuevo pago"}</Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>Formulario operativo conectado al CRUD real.</Typography>
-              <Divider sx={{ mb: 2 }} />
-              <Stack spacing={1.7}>
-                <TextField label="Fecha" type="date" value={form.fecha} onChange={(e) => setForm((s) => ({ ...s, fecha: e.target.value }))} InputLabelProps={{ shrink: true }} fullWidth />
-                <TextField select label="Cuenta origen" value={form.cuentaOrigenId || ""} onChange={(e) => setForm((s) => ({ ...s, cuentaOrigenId: Number(e.target.value) }))} fullWidth>
-                  {(cuentasQuery.data ?? []).map((x: CatalogoSimple) => <MenuItem key={x.id} value={x.id}>{x.nombre}</MenuItem>)}
+        <Box
+          sx={{
+            display: "grid",
+            gridTemplateColumns: { xs: "repeat(2, minmax(0,1fr))", md: "repeat(4, minmax(0,1fr))" },
+            gap: 1,
+          }}
+        >
+          {[
+            { title: "Total filtrado", value: formatMonto(stats.total) },
+            { title: "Pago más alto", value: formatMonto(stats.maxPago) },
+            { title: "No presupuestado", value: formatMonto(stats.noPresup), danger: true },
+            { title: "Beneficiarios", value: String(stats.uniquePayees) },
+          ].map((kpi) => (
+            <Box key={kpi.title}>
+              <Panel sx={{ px: 1.1, py: 0.85, minHeight: 56 }}>
+                <Typography sx={{ fontSize: BODY_TEXT_SIZE, color: "#6b7280", lineHeight: 1.1 }}>{kpi.title}</Typography>
+                <Typography sx={{ fontSize: "12px", color: kpi.danger ? "#b91c1c" : "#111827", fontWeight: 600, lineHeight: 1.2, mt: 0.35 }}>
+                  {kpi.value}
+                </Typography>
+              </Panel>
+            </Box>
+          ))}
+        </Box>
+
+        {loading && (
+          <Panel sx={{ px: 1.1, py: 0.65 }}>
+            <Stack direction="row" spacing={0.8} alignItems="center">
+              <CircularProgress size={14} />
+              <Typography sx={{ fontSize: BODY_TEXT_SIZE, color: "#4b5563" }}>Procesando información...</Typography>
+            </Stack>
+          </Panel>
+        )}
+
+        <Box
+          sx={{
+            display: "grid",
+            gridTemplateColumns: { xs: "1fr", lg: "minmax(300px, 340px) minmax(0, 1fr)", xl: "minmax(320px, 360px) minmax(0, 1fr)" },
+            gap: 1.5,
+            alignItems: "start",
+          }}
+        >
+          <Box>
+            <Panel sx={{ p: 1 }}>
+              <Typography sx={{ fontSize: LOCAL_TITLE_SIZE, color: "#111827", fontWeight: 600 }}>{selected ? "Editar pago" : "Nuevo pago"}</Typography>
+              <Typography sx={{ fontSize: BODY_TEXT_SIZE, color: "#6b7280", mb: 0.7 }}>Formulario compacto de operación.</Typography>
+              <Divider sx={{ mb: 0.8, borderColor: "#e5e7eb" }} />
+
+              <Stack spacing={0.7} className="pagos-form-compact">
+                <TextField
+                  size="small"
+                  label="Fecha"
+                  type="date"
+                  value={form.fecha}
+                  onChange={(e) => setForm((s) => ({ ...s, fecha: e.target.value }))}
+                  InputLabelProps={{ shrink: true }}
+                  fullWidth
+                />
+                <TextField
+                  size="small"
+                  select
+                  label="Cuenta origen"
+                  value={form.cuentaOrigenId || ""}
+                  onChange={(e) => setForm((s) => ({ ...s, cuentaOrigenId: Number(e.target.value) }))}
+                  InputLabelProps={{ shrink: true }}
+                  fullWidth
+                >
+                  {(cuentasQuery.data ?? []).map((x: CatalogoSimple) => (
+                    <MenuItem key={x.id} value={x.id} sx={{ fontSize: BODY_TEXT_SIZE }}>
+                      {x.nombre}
+                    </MenuItem>
+                  ))}
                 </TextField>
-                <TextField label="Pagado a" value={form.pagadoA ?? ""} onChange={(e) => setForm((s) => ({ ...s, pagadoA: e.target.value }))} fullWidth />
-                <Grid container spacing={1.4}>
-                  <Grid item xs={12} md={6}>
-                    <TextField select label="Responsable" value={form.responsableId || ""} onChange={(e) => setForm((s) => ({ ...s, responsableId: e.target.value === "" ? 0 : Number(e.target.value) }))} fullWidth>
-                      <MenuItem value="">Sin responsable</MenuItem>
-                      {(responsablesQuery.data ?? []).map((x: CatalogoSimple) => <MenuItem key={x.id} value={x.id}>{x.nombre}</MenuItem>)}
+                <TextField
+                  size="small"
+                  label="Pagado a"
+                  value={form.pagadoA ?? ""}
+                  onChange={(e) => setForm((s) => ({ ...s, pagadoA: e.target.value }))}
+                  InputLabelProps={{ shrink: true }}
+                  fullWidth
+                />
+
+                <Grid container spacing={0.7}>
+                  <Grid item xs={6}>
+                    <TextField
+                      size="small"
+                      select
+                      label="Responsable"
+                      value={form.responsableId || ""}
+                      onChange={(e) => setForm((s) => ({ ...s, responsableId: e.target.value === "" ? 0 : Number(e.target.value) }))}
+                      InputLabelProps={{ shrink: true }}
+                      fullWidth
+                    >
+                      <MenuItem value="" sx={{ fontSize: BODY_TEXT_SIZE }}>Sin responsable</MenuItem>
+                      {(responsablesQuery.data ?? []).map((x: CatalogoSimple) => (
+                        <MenuItem key={x.id} value={x.id} sx={{ fontSize: BODY_TEXT_SIZE }}>
+                          {x.nombre}
+                        </MenuItem>
+                      ))}
                     </TextField>
                   </Grid>
-                  <Grid item xs={12} md={6}>
-                    <TextField select label="Período" value={form.periodoId || ""} onChange={(e) => setForm((s) => ({ ...s, periodoId: e.target.value === "" ? 0 : Number(e.target.value) }))} fullWidth>
-                      <MenuItem value="">Sin período</MenuItem>
-                      {(periodosQuery.data ?? []).map((x: CatalogoSimple) => <MenuItem key={x.id} value={x.id}>{x.nombre}</MenuItem>)}
+                  <Grid item xs={6}>
+                    <TextField
+                      size="small"
+                      select
+                      label="Período"
+                      value={form.periodoId || ""}
+                      onChange={(e) => setForm((s) => ({ ...s, periodoId: e.target.value === "" ? 0 : Number(e.target.value) }))}
+                      InputLabelProps={{ shrink: true }}
+                      fullWidth
+                    >
+                      <MenuItem value="" sx={{ fontSize: BODY_TEXT_SIZE }}>Sin período</MenuItem>
+                      {(periodosQuery.data ?? []).map((x: CatalogoSimple) => (
+                        <MenuItem key={x.id} value={x.id} sx={{ fontSize: BODY_TEXT_SIZE }}>
+                          {x.nombre}
+                        </MenuItem>
+                      ))}
                     </TextField>
                   </Grid>
                 </Grid>
-                <TextField select label="Rubro clasificación" value={form.rubroClasificacionId || ""} onChange={(e) => setForm((s) => ({ ...s, rubroClasificacionId: e.target.value === "" ? 0 : Number(e.target.value) }))} fullWidth>
-                  <MenuItem value="">Sin rubro</MenuItem>
-                  {(rubrosQuery.data ?? []).map((x: CatalogoSimple) => <MenuItem key={x.id} value={x.id}>{x.nombre}</MenuItem>)}
-                </TextField>
-                <TextField select label="Rubro aplicado" value={form.rubroAplicadoId || ""} onChange={(e) => setForm((s) => ({ ...s, rubroAplicadoId: e.target.value === "" ? 0 : Number(e.target.value) }))} fullWidth>
-                  <MenuItem value="">Sin rubro</MenuItem>
-                  {(rubrosQuery.data ?? []).map((x: CatalogoSimple) => <MenuItem key={x.id} value={x.id}>{x.nombre}</MenuItem>)}
-                </TextField>
-                <TextField label="Descripción" value={form.descripcion ?? ""} onChange={(e) => setForm((s) => ({ ...s, descripcion: e.target.value }))} fullWidth />
-                <TextField label="Monto" type="number" value={form.monto} onChange={(e) => setForm((s) => ({ ...s, monto: Number(e.target.value) }))} fullWidth />
-                <TextField label="Referencia externa" value={form.referenciaExterna ?? ""} onChange={(e) => setForm((s) => ({ ...s, referenciaExterna: e.target.value }))} fullWidth />
-                <TextField label="Observación" value={form.observacion ?? ""} onChange={(e) => setForm((s) => ({ ...s, observacion: e.target.value }))} fullWidth multiline minRows={2} />
-                <Stack direction="row" spacing={1.2} sx={{ pt: 1 }}>
-                  <Button variant="contained" onClick={save} disabled={loading} sx={{ borderRadius: 999, px: 3, fontWeight: 900 }}>Guardar</Button>
-                  <Button variant="outlined" onClick={resetForm} disabled={loading} sx={{ borderRadius: 999, fontWeight: 900 }}>Nuevo</Button>
-                  <Button color="error" variant="outlined" onClick={remove} disabled={loading || !selected} sx={{ borderRadius: 999, fontWeight: 900 }}>Eliminar</Button>
+
+                <Grid container spacing={0.7}>
+                  <Grid item xs={6}>
+                    <TextField
+                      size="small"
+                      select
+                      label="Rubro clasificación"
+                      value={form.rubroClasificacionId || ""}
+                      onChange={(e) => setForm((s) => ({ ...s, rubroClasificacionId: e.target.value === "" ? 0 : Number(e.target.value) }))}
+                      InputLabelProps={{ shrink: true }}
+                      fullWidth
+                    >
+                      <MenuItem value="" sx={{ fontSize: BODY_TEXT_SIZE }}>Sin rubro</MenuItem>
+                      {(rubrosQuery.data ?? []).map((x: CatalogoSimple) => (
+                        <MenuItem key={x.id} value={x.id} sx={{ fontSize: BODY_TEXT_SIZE }}>
+                          {x.nombre}
+                        </MenuItem>
+                      ))}
+                    </TextField>
+                  </Grid>
+                  <Grid item xs={6}>
+                    <TextField
+                      size="small"
+                      select
+                      label="Rubro aplicado"
+                      value={form.rubroAplicadoId || ""}
+                      onChange={(e) => setForm((s) => ({ ...s, rubroAplicadoId: e.target.value === "" ? 0 : Number(e.target.value) }))}
+                      InputLabelProps={{ shrink: true }}
+                      fullWidth
+                    >
+                      <MenuItem value="" sx={{ fontSize: BODY_TEXT_SIZE }}>Sin rubro</MenuItem>
+                      {(rubrosQuery.data ?? []).map((x: CatalogoSimple) => (
+                        <MenuItem key={x.id} value={x.id} sx={{ fontSize: BODY_TEXT_SIZE }}>
+                          {x.nombre}
+                        </MenuItem>
+                      ))}
+                    </TextField>
+                  </Grid>
+                </Grid>
+
+                <TextField
+                  size="small"
+                  label="Descripción"
+                  value={form.descripcion ?? ""}
+                  onChange={(e) => setForm((s) => ({ ...s, descripcion: e.target.value }))}
+                  InputLabelProps={{ shrink: true }}
+                  fullWidth
+                />
+                <Grid container spacing={0.7}>
+                  <Grid item xs={6}>
+                    <TextField
+                      size="small"
+                      label="Monto"
+                      type="number"
+                      value={form.monto}
+                      onChange={(e) => setForm((s) => ({ ...s, monto: Number(e.target.value) }))}
+                      InputLabelProps={{ shrink: true }}
+                      fullWidth
+                    />
+                  </Grid>
+                  <Grid item xs={6}>
+                    <TextField
+                      size="small"
+                      label="Referencia"
+                      value={form.referenciaExterna ?? ""}
+                      onChange={(e) => setForm((s) => ({ ...s, referenciaExterna: e.target.value }))}
+                      InputLabelProps={{ shrink: true }}
+                      fullWidth
+                    />
+                  </Grid>
+                </Grid>
+                <TextField
+                  size="small"
+                  label="Observación"
+                  value={form.observacion ?? ""}
+                  onChange={(e) => setForm((s) => ({ ...s, observacion: e.target.value }))}
+                  InputLabelProps={{ shrink: true }}
+                  fullWidth
+                  multiline
+                  minRows={2}
+                />
+
+                <Stack direction="row" spacing={0.6} sx={{ pt: 0.2 }}>
+                  <Button
+                    variant="contained"
+                    onClick={save}
+                    disabled={loading}
+                    sx={{
+                      minHeight: 28,
+                      px: 1.1,
+                      fontSize: "11px",
+                      fontWeight: 500,
+                      textTransform: "none",
+                      borderRadius: "6px",
+                      bgcolor: "#4f46e5",
+                      boxShadow: "none",
+                    }}
+                  >
+                    Guardar
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    onClick={resetForm}
+                    disabled={loading}
+                    sx={{
+                      minHeight: 28,
+                      px: 1,
+                      fontSize: "11px",
+                      fontWeight: 500,
+                      textTransform: "none",
+                      borderRadius: "6px",
+                      borderColor: "#d1d5db",
+                      color: "#374151",
+                    }}
+                  >
+                    Nuevo
+                  </Button>
+                  <Button
+                    color="error"
+                    variant="outlined"
+                    onClick={remove}
+                    disabled={loading || !selected}
+                    sx={{
+                      minHeight: 28,
+                      px: 1,
+                      fontSize: "11px",
+                      fontWeight: 500,
+                      textTransform: "none",
+                      borderRadius: "6px",
+                    }}
+                  >
+                    Eliminar
+                  </Button>
                 </Stack>
               </Stack>
-            </GlassCard>
-          </Grid>
+            </Panel>
+          </Box>
 
-          <Grid item xs={12} lg={8}>
-            <GlassCard sx={{ p: 0, minHeight: 710 }}>
-              <Box sx={{ p: 2.4 }}>
-                <Stack direction={{ xs: "column", md: "row" }} justifyContent="space-between" spacing={1.5} alignItems={{ xs: "stretch", md: "center" }}>
-                  <Box>
-                    <Typography variant="h5" fontWeight={950}>Historial de pagos</Typography>
-                    <Typography variant="body2" color="text.secondary">Selecciona una fila para editar. Filtra por texto o período.</Typography>
-                  </Box>
-                  <Stack direction={{ xs: "column", sm: "row" }} spacing={1.2}>
-                    <TextField size="small" label="Buscar" value={search} onChange={(e) => setSearch(e.target.value)} />
-                    <TextField select size="small" label="Período" value={periodFilter} onChange={(e) => setPeriodFilter(e.target.value === "" ? "" : Number(e.target.value))} sx={{ minWidth: 150 }}>
-                      <MenuItem value="">Todos</MenuItem>
-                      {(periodosQuery.data ?? []).map((x: CatalogoSimple) => <MenuItem key={x.id} value={x.id}>{x.nombre}</MenuItem>)}
-                    </TextField>
-                  </Stack>
+          <Box>
+            <Panel sx={{ p: 1, width: "100%", minWidth: 0, height: "100%", minHeight: 620, display: "flex", flexDirection: "column" }}>
+              <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 0.8 }}>
+                <Box>
+                  <Typography sx={{ fontSize: LOCAL_TITLE_SIZE, color: "#111827", fontWeight: 600 }}>Historial de pagos</Typography>
+                  <Typography sx={{ fontSize: BODY_TEXT_SIZE, color: "#6b7280" }}>Selecciona una fila para editar.</Typography>
+                </Box>
+                <Stack direction="row" spacing={0.6}>
+                  <TextField
+                    size="small"
+                    label="Buscar"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    sx={{ width: 170 }}
+                  />
+                  <TextField
+                    select
+                    size="small"
+                    label="Período"
+                    value={periodFilter}
+                    onChange={(e) => setPeriodFilter(e.target.value === "" ? "" : Number(e.target.value))}
+                    sx={{ minWidth: 120 }}
+                  >
+                    <MenuItem value="" sx={{ fontSize: BODY_TEXT_SIZE }}>Todos</MenuItem>
+                    {(periodosQuery.data ?? []).map((x: CatalogoSimple) => (
+                      <MenuItem key={x.id} value={x.id} sx={{ fontSize: BODY_TEXT_SIZE }}>
+                        {x.nombre}
+                      </MenuItem>
+                    ))}
+                  </TextField>
                 </Stack>
-              </Box>
-              <Box sx={{ height: 595, px: 1.5, pb: 1.5 }}>
+              </Stack>
+
+              <Box sx={{ flex: 1, minHeight: 540, width: "100%", minWidth: 0 }}>
                 <DataGrid
                   rows={filteredRows}
                   columns={columns}
                   loading={pagosQuery.isLoading}
                   disableRowSelectionOnClick
                   onRowClick={onRowClick}
+                  getRowId={(r) => r.id}
                   pageSizeOptions={[10, 20, 50]}
-                  initialState={{ pagination: { paginationModel: { pageSize: 10, page: 0 } } }}
+                  initialState={{ pagination: { paginationModel: { pageSize: 20, page: 0 } } }}
+                  rowHeight={34}
+                  columnHeaderHeight={34}
                   sx={{
-                    border: 0,
-                    "& .MuiDataGrid-columnHeaders": { bgcolor: "rgba(248,250,252,.95)", borderRadius: 3, color: "#64748b", fontWeight: 900 },
-                    "& .MuiDataGrid-row": { borderRadius: 3, transition: "all .18s ease" },
-                    "& .MuiDataGrid-row:hover": { bgcolor: "rgba(99,102,241,.07)", transform: "scale(1.002)" },
-                    "& .MuiDataGrid-cell": { borderColor: "rgba(226,232,240,.72)" },
-                    "& .MuiDataGrid-footerContainer": { borderTop: "1px solid rgba(226,232,240,.9)" },
+                    width: "100%",
+                    border: "1px solid #e5e7eb",
+                    borderRadius: "6px",
+                    backgroundColor: "#fff",
+                    "& .MuiDataGrid-columnHeaders": {
+                      borderTopLeftRadius: "6px",
+                      borderTopRightRadius: "6px",
+                      backgroundColor: "#f8fafc",
+                      borderBottom: "1px solid #e5e7eb",
+                    },
+                    "& .MuiDataGrid-columnHeaderTitle": {
+                      fontSize: "10.5px",
+                      fontWeight: 600,
+                      color: "#374151",
+                      fontFamily: 'Calibri, "Calibri New", Arial, sans-serif',
+                    },
+                    "& .MuiDataGrid-cell": {
+                      borderColor: "#f1f5f9",
+                      fontSize: BODY_TEXT_SIZE,
+                      color: "#111827",
+                      fontFamily: 'Calibri, "Calibri New", Arial, sans-serif',
+                      py: 0,
+                    },
+                    "& .MuiDataGrid-row:hover": {
+                      backgroundColor: alpha("#4f46e5", 0.05),
+                    },
+                    "& .MuiDataGrid-footerContainer": {
+                      minHeight: 34,
+                      borderTop: "1px solid #e5e7eb",
+                      "& p, & .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows": { fontSize: BODY_TEXT_SIZE },
+                    },
+                    "& .MuiTablePagination-select": {
+                      fontSize: BODY_TEXT_SIZE,
+                    },
+                    "& .MuiDataGrid-virtualScroller": {
+                      overflowX: "auto",
+                      minWidth: 0,
+                    },
+                    "& .MuiDataGrid-selectedRowCount": {
+                      fontSize: BODY_TEXT_SIZE,
+                    },
                   }}
                 />
               </Box>
-            </GlassCard>
-          </Grid>
-        </Grid>
+            </Panel>
+          </Box>
+        </Box>
       </Stack>
+
+      <GlobalStyles
+        styles={{
+          "#root .MuiInputBase-root:not(.MuiInputBase-multiline)": {
+            height: "32px",
+            borderRadius: "6px",
+            fontSize: BODY_TEXT_SIZE,
+            fontFamily: 'Calibri, "Calibri New", Arial, sans-serif',
+          },
+          "#root .MuiInputLabel-root": {
+            fontSize: "10px",
+            fontFamily: 'Calibri, "Calibri New", Arial, sans-serif',
+          },
+          "#root .MuiMenuItem-root": {
+            minHeight: "30px",
+            fontSize: "10px",
+            fontFamily: 'Calibri, "Calibri New", Arial, sans-serif',
+          },
+          "#root .MuiButton-root": {
+            fontSize: "11px",
+            fontFamily: 'Calibri, "Calibri New", Arial, sans-serif',
+          },
+          "#root .pagos-form-compact .MuiOutlinedInput-input": {
+            paddingTop: "6px",
+            paddingBottom: "6px",
+          },
+          "#root .pagos-form-compact .MuiSelect-select": {
+            display: "flex",
+            alignItems: "center",
+          },
+        }}
+      />
     </Box>
   );
 }
