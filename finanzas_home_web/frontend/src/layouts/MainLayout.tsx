@@ -36,27 +36,36 @@ export function MainLayout() {
             width: "100%",
             maxWidth: "none",
             py: 2,
-            px: "clamp(12px, 1.5vw, 24px)",
+            px: "clamp(6px, 0.9vw, 14px)",
           }}
         >
           <Box
             sx={{
               display: "grid",
-              gridTemplateColumns: { xs: "1fr", md: "260px minmax(0, 1fr)" },
+              gridTemplateColumns: { xs: "1fr", md: "248px minmax(0, 1fr)" },
               gap: 1.5,
-              alignItems: "start",
+              alignItems: "stretch",
             }}
           >
-            <Box>
+            <Box sx={{ height: "100%", mt: { md: 3.5, lg: 3.5 } }}>
               <SideNav />
             </Box>
             <Box minWidth={0}>
-              <Typography variant="overline" color="text.secondary">
+              <Typography
+                color="text.secondary"
+                sx={{
+                  fontSize: "19px",
+                  lineHeight: 1.05,
+                  letterSpacing: "0.06em",
+                  textTransform: "uppercase",
+                  fontWeight: 600,
+                }}
+              >
                 {routeTitles[location.pathname] ?? "Finanzas_Home Web"}
               </Typography>
-              <Box sx={{ mt: 0.6 }}>
-                <Outlet />
-              </Box>
+                <Box sx={{ mt: 0.4 }}>
+                  <Outlet />
+                </Box>
             </Box>
           </Box>
         </Box>

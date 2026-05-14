@@ -30,7 +30,7 @@ const groups = [
 
 export function SideNav() {
   return (
-    <Paper elevation={0} sx={{ borderRadius: "8px", overflow: "hidden", border: "1px solid #e5e7eb", background: "linear-gradient(180deg, rgba(255,255,255,.94), rgba(245,248,255,.74))", boxShadow: "0 8px 24px rgba(41,72,152,.08)", backdropFilter: "blur(12px)" }}>
+    <Paper elevation={0} sx={{ height: "100%", borderRadius: "8px", overflow: "hidden", border: "1px solid #e5e7eb", background: "linear-gradient(180deg, rgba(255,255,255,.94), rgba(245,248,255,.74))", boxShadow: "0 8px 24px rgba(41,72,152,.08)", backdropFilter: "blur(12px)" }}>
       <Typography variant="h6" fontWeight={700} sx={{ p: 2, pb: 1 }}>
         Módulos
       </Typography>

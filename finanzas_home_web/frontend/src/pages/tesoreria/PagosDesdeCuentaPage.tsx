@@ -49,7 +49,7 @@ const emptyForm: PagoDesdeCuentaUpsert = {
 };
 
 const LOCAL_TITLE_SIZE = "13px";
-const BODY_TEXT_SIZE = "10.5px";
+const BODY_TEXT_SIZE = "11px";
 
 function PageStyles() {
   return (
@@ -98,6 +98,17 @@ function CellText({ value }: { value: unknown }) {
         {text}
       </Typography>
     </Tooltip>
+  );
+}
+
+function FieldBlock({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <Box>
+      <Typography sx={{ fontSize: "11px", color: "#6b7280", lineHeight: 1, fontWeight: 500, mb: 0.45 }}>
+        {label}
+      </Typography>
+      {children}
+    </Box>
   );
 }
 
@@ -412,7 +423,7 @@ export default function PagosDesdeCuentaPage() {
           sx={{
             display: "grid",
             gridTemplateColumns: { xs: "repeat(2, minmax(0,1fr))", md: "repeat(4, minmax(0,1fr))" },
-            gap: 1,
+            gap: 1.6,
           }}
         >
           {[
@@ -422,9 +433,9 @@ export default function PagosDesdeCuentaPage() {
             { title: "Beneficiarios", value: String(stats.uniquePayees) },
           ].map((kpi) => (
             <Box key={kpi.title}>
-              <Panel sx={{ px: 1.1, py: 0.85, minHeight: 56 }}>
-                <Typography sx={{ fontSize: BODY_TEXT_SIZE, color: "#6b7280", lineHeight: 1.1 }}>{kpi.title}</Typography>
-                <Typography sx={{ fontSize: "12px", color: kpi.danger ? "#b91c1c" : "#111827", fontWeight: 600, lineHeight: 1.2, mt: 0.35 }}>
+              <Panel sx={{ px: 1.35, py: 1.05, minHeight: 70, display: "flex", flexDirection: "column", justifyContent: "center" }}>
+                <Typography sx={{ fontSize: "11.5px", color: "#6b7280", lineHeight: 1.1 }}>{kpi.title}</Typography>
+                <Typography sx={{ fontSize: "17px", color: kpi.danger ? "#b91c1c" : "#111827", fontWeight: 600, lineHeight: 1.15, mt: 0.25 }}>
                   {kpi.value}
                 </Typography>
               </Panel>
@@ -444,170 +455,170 @@ export default function PagosDesdeCuentaPage() {
         <Box
           sx={{
             display: "grid",
-            gridTemplateColumns: { xs: "1fr", lg: "minmax(300px, 340px) minmax(0, 1fr)", xl: "minmax(320px, 360px) minmax(0, 1fr)" },
+            gridTemplateColumns: { xs: "1fr", lg: "minmax(330px, 350px) minmax(0, 1fr)", xl: "minmax(340px, 360px) minmax(0, 1fr)" },
             gap: 1.5,
             alignItems: "start",
           }}
         >
           <Box>
-            <Panel sx={{ p: 1 }}>
+            <Panel sx={{ p: 0.95 }}>
               <Typography sx={{ fontSize: LOCAL_TITLE_SIZE, color: "#111827", fontWeight: 600 }}>{selected ? "Editar pago" : "Nuevo pago"}</Typography>
               <Typography sx={{ fontSize: BODY_TEXT_SIZE, color: "#6b7280", mb: 0.7 }}>Formulario compacto de operación.</Typography>
               <Divider sx={{ mb: 0.8, borderColor: "#e5e7eb" }} />
 
               <Stack spacing={0.7} className="pagos-form-compact">
-                <TextField
-                  size="small"
-                  label="Fecha"
-                  type="date"
-                  value={form.fecha}
-                  onChange={(e) => setForm((s) => ({ ...s, fecha: e.target.value }))}
-                  InputLabelProps={{ shrink: true }}
-                  fullWidth
-                />
-                <TextField
-                  size="small"
-                  select
-                  label="Cuenta origen"
-                  value={form.cuentaOrigenId || ""}
-                  onChange={(e) => setForm((s) => ({ ...s, cuentaOrigenId: Number(e.target.value) }))}
-                  InputLabelProps={{ shrink: true }}
-                  fullWidth
-                >
-                  {(cuentasQuery.data ?? []).map((x: CatalogoSimple) => (
-                    <MenuItem key={x.id} value={x.id} sx={{ fontSize: BODY_TEXT_SIZE }}>
-                      {x.nombre}
-                    </MenuItem>
-                  ))}
-                </TextField>
-                <TextField
-                  size="small"
-                  label="Pagado a"
-                  value={form.pagadoA ?? ""}
-                  onChange={(e) => setForm((s) => ({ ...s, pagadoA: e.target.value }))}
-                  InputLabelProps={{ shrink: true }}
-                  fullWidth
-                />
+                <FieldBlock label="Fecha">
+                  <TextField
+                    size="small"
+                    type="date"
+                    value={form.fecha}
+                    onChange={(e) => setForm((s) => ({ ...s, fecha: e.target.value }))}
+                    fullWidth
+                  />
+                </FieldBlock>
+                <FieldBlock label="Cuenta origen">
+                  <TextField
+                    size="small"
+                    select
+                    value={form.cuentaOrigenId || ""}
+                    onChange={(e) => setForm((s) => ({ ...s, cuentaOrigenId: Number(e.target.value) }))}
+                    fullWidth
+                  >
+                    {(cuentasQuery.data ?? []).map((x: CatalogoSimple) => (
+                      <MenuItem key={x.id} value={x.id} sx={{ fontSize: BODY_TEXT_SIZE }}>
+                        {x.nombre}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                </FieldBlock>
+                <FieldBlock label="Pagado a">
+                  <TextField
+                    size="small"
+                    value={form.pagadoA ?? ""}
+                    onChange={(e) => setForm((s) => ({ ...s, pagadoA: e.target.value }))}
+                    fullWidth
+                  />
+                </FieldBlock>
 
                 <Grid container spacing={0.7}>
                   <Grid item xs={6}>
-                    <TextField
-                      size="small"
-                      select
-                      label="Responsable"
-                      value={form.responsableId || ""}
-                      onChange={(e) => setForm((s) => ({ ...s, responsableId: e.target.value === "" ? 0 : Number(e.target.value) }))}
-                      InputLabelProps={{ shrink: true }}
-                      fullWidth
-                    >
-                      <MenuItem value="" sx={{ fontSize: BODY_TEXT_SIZE }}>Sin responsable</MenuItem>
-                      {(responsablesQuery.data ?? []).map((x: CatalogoSimple) => (
-                        <MenuItem key={x.id} value={x.id} sx={{ fontSize: BODY_TEXT_SIZE }}>
-                          {x.nombre}
-                        </MenuItem>
-                      ))}
-                    </TextField>
+                    <FieldBlock label="Responsable">
+                      <TextField
+                        size="small"
+                        select
+                        value={form.responsableId || ""}
+                        onChange={(e) => setForm((s) => ({ ...s, responsableId: e.target.value === "" ? 0 : Number(e.target.value) }))}
+                        fullWidth
+                      >
+                        <MenuItem value="" sx={{ fontSize: BODY_TEXT_SIZE }}>Sin responsable</MenuItem>
+                        {(responsablesQuery.data ?? []).map((x: CatalogoSimple) => (
+                          <MenuItem key={x.id} value={x.id} sx={{ fontSize: BODY_TEXT_SIZE }}>
+                            {x.nombre}
+                          </MenuItem>
+                        ))}
+                      </TextField>
+                    </FieldBlock>
                   </Grid>
                   <Grid item xs={6}>
-                    <TextField
-                      size="small"
-                      select
-                      label="Período"
-                      value={form.periodoId || ""}
-                      onChange={(e) => setForm((s) => ({ ...s, periodoId: e.target.value === "" ? 0 : Number(e.target.value) }))}
-                      InputLabelProps={{ shrink: true }}
-                      fullWidth
-                    >
-                      <MenuItem value="" sx={{ fontSize: BODY_TEXT_SIZE }}>Sin período</MenuItem>
-                      {(periodosQuery.data ?? []).map((x: CatalogoSimple) => (
-                        <MenuItem key={x.id} value={x.id} sx={{ fontSize: BODY_TEXT_SIZE }}>
-                          {x.nombre}
-                        </MenuItem>
-                      ))}
-                    </TextField>
+                    <FieldBlock label="Período">
+                      <TextField
+                        size="small"
+                        select
+                        value={form.periodoId || ""}
+                        onChange={(e) => setForm((s) => ({ ...s, periodoId: e.target.value === "" ? 0 : Number(e.target.value) }))}
+                        fullWidth
+                      >
+                        <MenuItem value="" sx={{ fontSize: BODY_TEXT_SIZE }}>Sin período</MenuItem>
+                        {(periodosQuery.data ?? []).map((x: CatalogoSimple) => (
+                          <MenuItem key={x.id} value={x.id} sx={{ fontSize: BODY_TEXT_SIZE }}>
+                            {x.nombre}
+                          </MenuItem>
+                        ))}
+                      </TextField>
+                    </FieldBlock>
                   </Grid>
                 </Grid>
 
                 <Grid container spacing={0.7}>
                   <Grid item xs={6}>
-                    <TextField
-                      size="small"
-                      select
-                      label="Rubro clasificación"
-                      value={form.rubroClasificacionId || ""}
-                      onChange={(e) => setForm((s) => ({ ...s, rubroClasificacionId: e.target.value === "" ? 0 : Number(e.target.value) }))}
-                      InputLabelProps={{ shrink: true }}
-                      fullWidth
-                    >
-                      <MenuItem value="" sx={{ fontSize: BODY_TEXT_SIZE }}>Sin rubro</MenuItem>
-                      {(rubrosQuery.data ?? []).map((x: CatalogoSimple) => (
-                        <MenuItem key={x.id} value={x.id} sx={{ fontSize: BODY_TEXT_SIZE }}>
-                          {x.nombre}
-                        </MenuItem>
-                      ))}
-                    </TextField>
+                    <FieldBlock label="Rubro clasificación">
+                      <TextField
+                        size="small"
+                        select
+                        value={form.rubroClasificacionId || ""}
+                        onChange={(e) => setForm((s) => ({ ...s, rubroClasificacionId: e.target.value === "" ? 0 : Number(e.target.value) }))}
+                        fullWidth
+                      >
+                        <MenuItem value="" sx={{ fontSize: BODY_TEXT_SIZE }}>Sin rubro</MenuItem>
+                        {(rubrosQuery.data ?? []).map((x: CatalogoSimple) => (
+                          <MenuItem key={x.id} value={x.id} sx={{ fontSize: BODY_TEXT_SIZE }}>
+                            {x.nombre}
+                          </MenuItem>
+                        ))}
+                      </TextField>
+                    </FieldBlock>
                   </Grid>
                   <Grid item xs={6}>
-                    <TextField
-                      size="small"
-                      select
-                      label="Rubro aplicado"
-                      value={form.rubroAplicadoId || ""}
-                      onChange={(e) => setForm((s) => ({ ...s, rubroAplicadoId: e.target.value === "" ? 0 : Number(e.target.value) }))}
-                      InputLabelProps={{ shrink: true }}
-                      fullWidth
-                    >
-                      <MenuItem value="" sx={{ fontSize: BODY_TEXT_SIZE }}>Sin rubro</MenuItem>
-                      {(rubrosQuery.data ?? []).map((x: CatalogoSimple) => (
-                        <MenuItem key={x.id} value={x.id} sx={{ fontSize: BODY_TEXT_SIZE }}>
-                          {x.nombre}
-                        </MenuItem>
-                      ))}
-                    </TextField>
+                    <FieldBlock label="Rubro aplicado">
+                      <TextField
+                        size="small"
+                        select
+                        value={form.rubroAplicadoId || ""}
+                        onChange={(e) => setForm((s) => ({ ...s, rubroAplicadoId: e.target.value === "" ? 0 : Number(e.target.value) }))}
+                        fullWidth
+                      >
+                        <MenuItem value="" sx={{ fontSize: BODY_TEXT_SIZE }}>Sin rubro</MenuItem>
+                        {(rubrosQuery.data ?? []).map((x: CatalogoSimple) => (
+                          <MenuItem key={x.id} value={x.id} sx={{ fontSize: BODY_TEXT_SIZE }}>
+                            {x.nombre}
+                          </MenuItem>
+                        ))}
+                      </TextField>
+                    </FieldBlock>
                   </Grid>
                 </Grid>
 
-                <TextField
-                  size="small"
-                  label="Descripción"
-                  value={form.descripcion ?? ""}
-                  onChange={(e) => setForm((s) => ({ ...s, descripcion: e.target.value }))}
-                  InputLabelProps={{ shrink: true }}
-                  fullWidth
-                />
+                <FieldBlock label="Descripción">
+                  <TextField
+                    size="small"
+                    value={form.descripcion ?? ""}
+                    onChange={(e) => setForm((s) => ({ ...s, descripcion: e.target.value }))}
+                    fullWidth
+                  />
+                </FieldBlock>
                 <Grid container spacing={0.7}>
                   <Grid item xs={6}>
-                    <TextField
-                      size="small"
-                      label="Monto"
-                      type="number"
-                      value={form.monto}
-                      onChange={(e) => setForm((s) => ({ ...s, monto: Number(e.target.value) }))}
-                      InputLabelProps={{ shrink: true }}
-                      fullWidth
-                    />
+                    <FieldBlock label="Monto">
+                      <TextField
+                        size="small"
+                        type="number"
+                        value={form.monto}
+                        onChange={(e) => setForm((s) => ({ ...s, monto: Number(e.target.value) }))}
+                        fullWidth
+                      />
+                    </FieldBlock>
                   </Grid>
                   <Grid item xs={6}>
-                    <TextField
-                      size="small"
-                      label="Referencia"
-                      value={form.referenciaExterna ?? ""}
-                      onChange={(e) => setForm((s) => ({ ...s, referenciaExterna: e.target.value }))}
-                      InputLabelProps={{ shrink: true }}
-                      fullWidth
-                    />
+                    <FieldBlock label="Referencia">
+                      <TextField
+                        size="small"
+                        value={form.referenciaExterna ?? ""}
+                        onChange={(e) => setForm((s) => ({ ...s, referenciaExterna: e.target.value }))}
+                        fullWidth
+                      />
+                    </FieldBlock>
                   </Grid>
                 </Grid>
-                <TextField
-                  size="small"
-                  label="Observación"
-                  value={form.observacion ?? ""}
-                  onChange={(e) => setForm((s) => ({ ...s, observacion: e.target.value }))}
-                  InputLabelProps={{ shrink: true }}
-                  fullWidth
-                  multiline
-                  minRows={2}
-                />
+                <FieldBlock label="Observación">
+                  <TextField
+                    size="small"
+                    value={form.observacion ?? ""}
+                    onChange={(e) => setForm((s) => ({ ...s, observacion: e.target.value }))}
+                    fullWidth
+                    multiline
+                    minRows={2}
+                  />
+                </FieldBlock>
 
                 <Stack direction="row" spacing={0.6} sx={{ pt: 0.2 }}>
                   <Button
@@ -708,8 +719,8 @@ export default function PagosDesdeCuentaPage() {
                   getRowId={(r) => r.id}
                   pageSizeOptions={[10, 20, 50]}
                   initialState={{ pagination: { paginationModel: { pageSize: 20, page: 0 } } }}
-                  rowHeight={34}
-                  columnHeaderHeight={34}
+                  rowHeight={36}
+                  columnHeaderHeight={36}
                   sx={{
                     width: "100%",
                     border: "1px solid #e5e7eb",
@@ -722,7 +733,7 @@ export default function PagosDesdeCuentaPage() {
                       borderBottom: "1px solid #e5e7eb",
                     },
                     "& .MuiDataGrid-columnHeaderTitle": {
-                      fontSize: "10.5px",
+                      fontSize: "11px",
                       fontWeight: 600,
                       color: "#374151",
                       fontFamily: 'Calibri, "Calibri New", Arial, sans-serif',
@@ -763,18 +774,24 @@ export default function PagosDesdeCuentaPage() {
       <GlobalStyles
         styles={{
           "#root .MuiInputBase-root:not(.MuiInputBase-multiline)": {
-            height: "32px",
+            height: "34px",
+            borderRadius: "6px",
+            fontSize: BODY_TEXT_SIZE,
+            fontFamily: 'Calibri, "Calibri New", Arial, sans-serif',
+          },
+          "#root .MuiInputBase-multiline": {
+            minHeight: "68px",
             borderRadius: "6px",
             fontSize: BODY_TEXT_SIZE,
             fontFamily: 'Calibri, "Calibri New", Arial, sans-serif',
           },
           "#root .MuiInputLabel-root": {
-            fontSize: "10px",
+            fontSize: "11px",
             fontFamily: 'Calibri, "Calibri New", Arial, sans-serif',
           },
           "#root .MuiMenuItem-root": {
             minHeight: "30px",
-            fontSize: "10px",
+            fontSize: BODY_TEXT_SIZE,
             fontFamily: 'Calibri, "Calibri New", Arial, sans-serif',
           },
           "#root .MuiButton-root": {
